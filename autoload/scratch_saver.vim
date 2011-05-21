@@ -75,8 +75,15 @@ function! scratch_saver#create_lock_file()
 
     " Okay, the path does not exist and is not a file.
     let dir = fnamemodify(lock_file, ':p:h')
+    try | call mkdir(dir, 'p') | catch | endtry
+    if !isdirectory(dir)
+        call s:echomsg('WarningMsg',
+        \   "scratch_saver: Could not create"
+        \   . " lock file directory.")
+        return
+    endif
+
     try
-        call mkdir(dir, 'p')
         call writefile([], lock_file)
     catch
         call s:echomsg('WarningMsg',
