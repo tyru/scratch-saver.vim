@@ -195,7 +195,7 @@ function! s:echomsg(hl, msg)
 endfunction
 
 function! s:get_lock_file()
-    return s:V.String.substring(
+    return s:V.String.replace(
     \   expand(g:scratch_saver#lock_file),
     \   '${pid}',
     \   getpid())
