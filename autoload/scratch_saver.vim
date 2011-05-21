@@ -8,6 +8,7 @@ set cpo&vim
 
 
 
+" TODO: Use v:servername instead of pid?
 if !exists('g:scratch_saver#lock_file')
     let g:scratch_saver#lock_file = '~/.vim/info/scratch_saver.${pid}.lock'
 endif
