@@ -88,8 +88,10 @@ function! s:write_list_to_buffer(pids)
     \   "want to restore unsaved buffer?",
     \   "",
     \]
+    let ERROR = -1
     for pid in a:pids
-        let lock_file = s:get_lock_file_by_pid(pid)
+        let lock_file = s:get_lock_file_by_pid(pid, ERROR)
+        if lock_file ==# ERROR | continue | endif
         call setline(1,
         \   messages
         \   + ["Unsaved buffer:"]
