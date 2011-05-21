@@ -243,11 +243,8 @@ function! s:divide_leftright(haystack, needle, error)
 endfunction
 
 function! s:process_is_running(pid)
-    try
-        return vimproc#kill(a:pid, 0) ==# 0
-    catch
-        return 0
-    endtry
+    try   | return vimproc#kill(a:pid, 0) ==# 0
+    catch | return 0 | endtry
 endfunction
 
 
