@@ -31,11 +31,13 @@ function! scratch_saver#prompt_if_force_quit()
 
     try
         call s:open_buffer()
-        call s:write_list_to_buffer()
+        call s:write_list_to_buffer(pids)
     catch
         call s:echomsg('WarningMsg',
         \   'fatal: Detected crash but'
-        \   . ' Could not create a buffer to restore...')
+        \   . ' Could not create a buffer to restore...'
+        \   . ' v:throwpoint = '.v:throwpoint
+        \   . ', v:exception = '.v:exception)
     endtry
 endfunction
 
@@ -79,15 +81,20 @@ function! s:open_buffer()
     \})
 endfunction
 
-function! s:write_list_to_buffer()
+function! s:write_list_to_buffer(pids)
     let messages = [
     \   "scratch_saver.vim detected crash!",
+    \   "(PID: ".join(a:pids, ',').")",
     \   "want to restore unsaved buffer?",
     \   "",
     \]
-    let lock_file = s:get_lock_file()
-    let unsaved_buffer_list = readfile(lock_file)
-    call setline(1, messages + unsaved_buffer_list)
+    for pid in a:pids
+        let lock_file = s:get_lock_file_by_pid(pid)
+        call setline(1,
+        \   messages
+        \   + ["Unsaved buffer:"]
+        \   + readfile(lock_file))
+    endfor
 endfunction
 
 function! scratch_saver#create_lock_file()
