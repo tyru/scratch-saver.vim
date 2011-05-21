@@ -31,12 +31,10 @@ function! scratch_saver#prompt_if_force_quit()
     " (certainly it's crash but it's not harmful
     " because there were no unsaved buffer)
     let empty_pids = copy(pids)    " Copy to not skip element when :unlet pids[i] occured.
-    let ERROR = -1
     for i in range(len(empty_pids))
         let pid = empty_pids[i]
-        let empty_lock_file = s:get_lock_file_by_pid(pid, ERROR)
-        if empty_lock_file !=# ERROR
-        \   && s:is_empty_file(empty_lock_file)
+        let empty_lock_file = s:get_lock_file_by_pid(pid)
+        if s:is_empty_file(empty_lock_file)
             try
                 call delete(empty_lock_file)
             catch
@@ -108,10 +106,8 @@ function! s:write_list_to_buffer(pids)
     \   "want to restore unsaved buffer?",
     \   "",
     \]
-    let ERROR = -1
     for pid in a:pids
-        let lock_file = s:get_lock_file_by_pid(pid, ERROR)
-        if lock_file ==# ERROR | continue | endif
+        let lock_file = s:get_lock_file_by_pid(pid)
         call setline(1,
         \   messages
         \   + ["Unsaved buffer:"]
@@ -224,7 +220,7 @@ function! s:get_pid_by_lock_file(lock_file, error)
     endif
 endfunction
 
-function! s:get_lock_file_by_pid(pid, error)
+function! s:get_lock_file_by_pid(pid)
     let [left, right] = s:V.String.divide_leftright(
     \   expand(g:scratch_saver#lock_file),
     \   '${pid}'
