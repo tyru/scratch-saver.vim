@@ -106,6 +106,28 @@ function! scratch_saver#quit_gracefully()
     endif
 endfunction
 
+function! scratch_saver#save_modified_buffers()
+    let lock_file = expand(g:scratch_saver#lock_file)
+    call writefile(s:get_modified_buffers(), lock_file)
+endfunction
+
+function! s:get_modified_buffers()
+    let is_modified =
+    \     'getbufvar(v:val, "&buftype") ==# ""'
+    \   . ' && '
+    \   . 'getbufvar(v:val, "&modified")'
+    return filter(s:get_all_buffers(), is_modified)
+endfunction
+
+function! s:get_all_buffers()
+    " Use tabpagebuflist() to get all buffers to avoid :redir
+    let buffers = []
+    for nr in range(tabpagenr('$'))
+        let buffers += tabpagebuflist(nr + 1)
+    endfor
+    return buffers
+endfunction
+
 
 function! s:echomsg(hl, msg)
     try

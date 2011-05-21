@@ -18,6 +18,9 @@ augroup scratch-saver
     autocmd VimEnter * call scratch_saver#prompt_if_force_quit()
     autocmd VimEnter * call scratch_saver#create_lock_file()
     autocmd VimLeave * call scratch_saver#quit_gracefully()
+
+    autocmd BufNew,BufWritePost
+    \   * call scratch_saver#save_modified_buffers()
 augroup END
 
 
