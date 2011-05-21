@@ -23,11 +23,11 @@ endfunction
 
 function! scratch_saver#prompt_if_force_quit()
     let pids = s:get_crashed_pids()
+    " Filter non-empty lock files.
+    call filter(pids, '! s:is_empty_lock_file_by_pid(v:val)')
     if empty(pids)
         return
     endif
-    " Filter non-empty lock files.
-    call filter(pids, '! s:is_empty_lock_file_by_pid(v:val)')
 
     try
         call s:open_buffer()
