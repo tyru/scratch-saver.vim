@@ -78,7 +78,7 @@ function! s:get_crashed_pids()
     let ERROR = -1
     for lock_file in s:get_all_lock_files()
         let pid = s:get_pid_by_lock_file(lock_file, ERROR)
-        if pid !=# ERROR && !s:process_is_running(pid)
+        if pid ># 0 && !s:process_is_running(pid)
             call add(pids, pid)
         endif
     endfor
@@ -210,14 +210,14 @@ function! s:get_pid_by_lock_file(lock_file, error)
     \   expand(g:scratch_saver#lock_file),
     \   '${pid}'
     \)
-    if stridx(a:lock_file, left) ==# 0
-        let pid = a:lock_file
-        let pid = empty(left)  ? pid : pid[strlen(left) :]
-        let pid = empty(right) ? pid : pid[: strlen(right) - 1]
-        return pid
-    else
+    if stridx(a:lock_file, left) !=# 0
         return a:error
     endif
+    let pid = a:lock_file
+    let pid = empty(left)  ? pid : pid[strlen(left) :]
+    let pid = empty(right) ? pid : pid[: strlen(pid) - strlen(right) - 1]
+    let positive_number = '^[1-9][0-9]*$'
+    return pid =~# positive_number ? pid + 0 : a:error
 endfunction
 
 function! s:get_lock_file_by_pid(pid)
