@@ -22,9 +22,8 @@ endfunction
 
 
 function! scratch_saver#prompt_if_force_quit()
-    " Show buffer when lock file exists.
-    let lock_file = s:get_lock_file()
-    if !filereadable(lock_file)
+    let pids = s:get_crashed_pids()
+    if empty(pids)
         return
     endif
 
@@ -36,6 +35,18 @@ function! scratch_saver#prompt_if_force_quit()
         \   'fatal: Detected crash but'
         \   . ' Could not create a buffer to restore...')
     endtry
+endfunction
+
+function! s:get_crashed_pids()
+    " Return true when discovered lock file whose process is dead.
+    let pids = []
+    for lock_file in s:get_all_lock_files()
+        let pid = s:get_pid_by_lock_file(lock_file)
+        if pid =~# '^\d\+$' && !s:process_is_running(pid)
+            call add(pids, pid)
+        endif
+    endfor
+    return pids
 endfunction
 
 let s:openbuf = {}
@@ -74,7 +85,7 @@ function! scratch_saver#create_lock_file()
     endif
 
     " Okay, the path does not exist and is not a file.
-    let dir = fnamemodify(lock_file, ':p:h')
+    let dir = s:get_lock_dir()
     try | call mkdir(dir, 'p') | catch | endtry
     if !isdirectory(dir)
         call s:echomsg('WarningMsg',
@@ -145,6 +156,29 @@ function! s:get_lock_file()
     \   getpid())
 endfunction
 
+function! s:get_lock_dir()
+    return fnamemodify(s:get_lock_file(), ':p:h')
+endfunction
+
+function! s:get_all_lock_files()
+    return split(glob(s:get_lock_dir() . '/*'), '\n')
+endfunction
+
+function! s:get_pid_by_lock_file(lock_file)
+    let [left, right] = s:divide_leftright(
+    \   expand(g:scratch_saver#lock_file),
+    \   '${pid}'
+    \)
+    if left !=# '' && stridx(a:lock_file, left) ==# 0
+        let pid = a:lock_file
+        let pid = empty(left)  ? pid : pid[strlen(left) :]
+        let pid = empty(right) ? pid : pid[: strlen(right) - 1]
+        return pid
+    else
+        return ''
+    endif
+endfunction
+
 function! s:substring(str, from, to)
     if a:str ==# '' || a:from ==# ''
         return a:str
@@ -158,6 +192,29 @@ function! s:substring(str, from, to)
         return left . a:to . right
     endif
 endfunction
+
+function! s:divide_leftright(haystack, needle)
+    let ERROR = ['', '']
+    if a:haystack ==# '' || a:needle ==# ''
+        return ERROR
+    endif
+    let idx = stridx(a:haystack, a:needle)
+    if idx ==# -1
+        return ERROR
+    endif
+    let left  = idx ==# 0 ? '' : a:haystack[: idx - 1]
+    let right = a:haystack[idx + strlen(a:needle) :]
+    return [left, right]
+endfunction
+
+function! s:process_is_running(pid)
+    try
+        return vimproc#kill(a:pid, 0) ==# 0
+    catch
+        return 0
+    endtry
+endfunction
+
 
 " Restore 'cpoptions' {{{
 let &cpo = s:save_cpo
