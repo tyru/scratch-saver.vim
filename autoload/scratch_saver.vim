@@ -26,6 +26,8 @@ function! scratch_saver#prompt_if_force_quit()
     if empty(pids)
         return
     endif
+    " Filter non-empty lock files.
+    call filter(pids, '! s:is_empty_lock_file_by_pid(v:val)')
 
     try
         call s:open_buffer()
@@ -35,6 +37,12 @@ function! scratch_saver#prompt_if_force_quit()
         \   'fatal: Detected crash but'
         \   . ' Could not create a buffer to restore...')
     endtry
+endfunction
+
+function! s:is_empty_lock_file_by_pid(pid)
+    try   | let lines = readfile(s:get_lock_file_by_pid(pid))
+    catch | let lines = [] | endtry
+    return empty(lines)
 endfunction
 
 function! s:get_crashed_pids()
