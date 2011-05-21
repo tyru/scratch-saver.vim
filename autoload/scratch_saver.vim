@@ -51,12 +51,14 @@ function! s:is_empty_lock_file_by_pid(pid)
     return empty(lines)
 endfunction
 
+" Return empty list for ERROR.
 function! s:get_crashed_pids()
     " Return true when discovered lock file whose process is dead.
     let pids = []
+    let ERROR = -1
     for lock_file in s:get_all_lock_files()
-        let pid = s:get_pid_by_lock_file(lock_file)
-        if pid =~# '^\d\+$' && !s:process_is_running(pid)
+        let pid = s:get_pid_by_lock_file(lock_file, ERROR)
+        if pid !=# ERROR && !s:process_is_running(pid)
             call add(pids, pid)
         endif
     endfor
@@ -178,19 +180,39 @@ function! s:get_all_lock_files()
     return split(glob(s:get_lock_dir() . '/*'), '\n')
 endfunction
 
-function! s:get_pid_by_lock_file(lock_file)
-    let [left, right] = s:divide_leftright(
+function! s:get_pid_by_lock_file(lock_file, error)
+    let ERROR = []
+    let leftright = s:divide_leftright(
     \   expand(g:scratch_saver#lock_file),
-    \   '${pid}'
+    \   '${pid}',
+    \   ERROR
     \)
-    if left !=# '' && stridx(a:lock_file, left) ==# 0
+    if leftright is ERROR
+        return a:error
+    endif
+    let [left, right] = leftright
+    if stridx(a:lock_file, left) ==# 0
         let pid = a:lock_file
         let pid = empty(left)  ? pid : pid[strlen(left) :]
         let pid = empty(right) ? pid : pid[: strlen(right) - 1]
         return pid
     else
-        return ''
+        return a:error
     endif
+endfunction
+
+function! s:get_lock_file_by_pid(pid, error)
+    let ERROR = []
+    let leftright = s:divide_leftright(
+    \   expand(g:scratch_saver#lock_file),
+    \   '${pid}',
+    \   ERROR
+    \)
+    if leftright is ERROR
+        return a:error
+    endif
+    let [left, right] = leftright
+    return left . a:pid . right
 endfunction
 
 function! s:substring(str, from, to)
@@ -207,14 +229,13 @@ function! s:substring(str, from, to)
     endif
 endfunction
 
-function! s:divide_leftright(haystack, needle)
-    let ERROR = ['', '']
+function! s:divide_leftright(haystack, needle, error)
     if a:haystack ==# '' || a:needle ==# ''
-        return ERROR
+        return a:error
     endif
     let idx = stridx(a:haystack, a:needle)
     if idx ==# -1
-        return ERROR
+        return a:error
     endif
     let left  = idx ==# 0 ? '' : a:haystack[: idx - 1]
     let right = a:haystack[idx + strlen(a:needle) :]
