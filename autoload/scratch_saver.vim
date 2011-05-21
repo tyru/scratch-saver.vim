@@ -66,7 +66,7 @@ function! scratch_saver#prompt_if_force_quit()
 endfunction
 
 function! s:is_empty_file(file)
-    try   | let lines = readfile(a:file)
+    try   | let lines = readfile(a:file, 'b', 1)
     catch | let lines = [] | endtry
     return empty(lines)
 endfunction
