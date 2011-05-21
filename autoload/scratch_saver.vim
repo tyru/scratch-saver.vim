@@ -17,6 +17,9 @@ if !exists('g:scratch_saver#open_command')
 endif
 
 
+let s:V = vital#of('scratch_saver').load('String')
+
+
 function! scratch_saver#load()
     " dummy function to load this script.
 endfunction
@@ -192,7 +195,7 @@ function! s:echomsg(hl, msg)
 endfunction
 
 function! s:get_lock_file()
-    return s:substring(
+    return s:V.String.substring(
     \   expand(g:scratch_saver#lock_file),
     \   '${pid}',
     \   getpid())
@@ -207,16 +210,10 @@ function! s:get_all_lock_files()
 endfunction
 
 function! s:get_pid_by_lock_file(lock_file, error)
-    let ERROR = []
-    let leftright = s:divide_leftright(
+    let [left, right] = s:V.String.divide_leftright(
     \   expand(g:scratch_saver#lock_file),
-    \   '${pid}',
-    \   ERROR
+    \   '${pid}'
     \)
-    if leftright is ERROR
-        return a:error
-    endif
-    let [left, right] = leftright
     if stridx(a:lock_file, left) ==# 0
         let pid = a:lock_file
         let pid = empty(left)  ? pid : pid[strlen(left) :]
@@ -228,44 +225,11 @@ function! s:get_pid_by_lock_file(lock_file, error)
 endfunction
 
 function! s:get_lock_file_by_pid(pid, error)
-    let ERROR = []
-    let leftright = s:divide_leftright(
+    let [left, right] = s:V.String.divide_leftright(
     \   expand(g:scratch_saver#lock_file),
-    \   '${pid}',
-    \   ERROR
+    \   '${pid}'
     \)
-    if leftright is ERROR
-        return a:error
-    endif
-    let [left, right] = leftright
     return left . a:pid . right
-endfunction
-
-function! s:substring(str, from, to)
-    if a:str ==# '' || a:from ==# ''
-        return a:str
-    endif
-    let idx = stridx(a:str, a:from)
-    if idx ==# -1
-        return a:str
-    else
-        let left  = idx ==# 0 ? '' : a:str[: idx - 1]
-        let right = a:str[idx + strlen(a:from) :]
-        return left . a:to . right
-    endif
-endfunction
-
-function! s:divide_leftright(haystack, needle, error)
-    if a:haystack ==# '' || a:needle ==# ''
-        return a:error
-    endif
-    let idx = stridx(a:haystack, a:needle)
-    if idx ==# -1
-        return a:error
-    endif
-    let left  = idx ==# 0 ? '' : a:haystack[: idx - 1]
-    let right = a:haystack[idx + strlen(a:needle) :]
-    return [left, right]
 endfunction
 
 function! s:process_is_running(pid)
