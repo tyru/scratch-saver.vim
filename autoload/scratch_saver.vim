@@ -66,9 +66,9 @@ function! scratch_saver#prompt_if_force_quit()
 endfunction
 
 function! s:is_empty_file(file)
-    try   | let lines = readfile(a:file, 'b', 1)
-    catch | let lines = [] | endtry
-    return empty(lines)
+    return empty(
+    \   s:return_exception('readfile', [a:file, 'b', 1], [])
+    \)
 endfunction
 
 " Return empty list for ERROR.
@@ -229,8 +229,13 @@ function! s:get_lock_file_by_pid(pid)
 endfunction
 
 function! s:process_is_running(pid)
-    try   | return vimproc#kill(a:pid, 0) ==# 0
-    catch | return 0 | endtry
+    " vimproc#kill() returns 0 when process is running.
+    return !s:return_exception('vimproc#kill', [a:pid, 0], 1)
+endfunction
+
+function! s:return_exception(func, args, error)
+    try   | return call(a:func, a:args)
+    catch | return a:error | endtry
 endfunction
 
 
