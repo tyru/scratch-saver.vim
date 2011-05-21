@@ -9,7 +9,7 @@ set cpo&vim
 
 
 if !exists('g:scratch_saver#lock_file')
-    let g:scratch_saver#lock_file = '~/.vim/info/scratch_saver.lock'
+    let g:scratch_saver#lock_file = '~/.vim/info/scratch_saver.${pid}.lock'
 endif
 if !exists('g:scratch_saver#open_command')
     let g:scratch_saver#open_command = 'vnew'
@@ -23,7 +23,7 @@ endfunction
 
 function! scratch_saver#prompt_if_force_quit()
     " Show buffer when lock file exists.
-    let lock_file = expand(g:scratch_saver#lock_file)
+    let lock_file = s:get_lock_file()
     if !filereadable(lock_file)
         return
     endif
@@ -58,7 +58,7 @@ function! s:write_list_to_buffer()
     \   "want to restore unsaved buffer?",
     \   "",
     \]
-    let lock_file = expand(g:scratch_saver#lock_file)
+    let lock_file = s:get_lock_file()
     let unsaved_buffer_list = readfile(lock_file)
     call setline(1, messages + unsaved_buffer_list)
 endfunction
@@ -66,7 +66,7 @@ endfunction
 function! scratch_saver#create_lock_file()
     " Create lock file.
     " Lock file should not exist here.
-    let lock_file = expand(g:scratch_saver#lock_file)
+    let lock_file = s:get_lock_file()
     if getftype(lock_file) !=# ''
         call s:echomsg('WarningMsg',
         \   "the path '" . lock_file . "'exists.")
@@ -94,7 +94,7 @@ endfunction
 
 function! scratch_saver#quit_gracefully()
     " Delete lock file.
-    let lock_file = expand(g:scratch_saver#lock_file)
+    let lock_file = s:get_lock_file()
     if filereadable(lock_file)
         try
             call delete(lock_file)
@@ -107,7 +107,7 @@ function! scratch_saver#quit_gracefully()
 endfunction
 
 function! scratch_saver#save_modified_buffers()
-    let lock_file = expand(g:scratch_saver#lock_file)
+    let lock_file = s:get_lock_file()
     call writefile(s:get_modified_buffers(), lock_file)
 endfunction
 
@@ -138,6 +138,26 @@ function! s:echomsg(hl, msg)
     endtry
 endfunction
 
+function! s:get_lock_file()
+    return s:substring(
+    \   expand(g:scratch_saver#lock_file),
+    \   '${pid}',
+    \   getpid())
+endfunction
+
+function! s:substring(str, from, to)
+    if a:str ==# '' || a:from ==# ''
+        return a:str
+    endif
+    let idx = stridx(a:str, a:from)
+    if idx ==# -1
+        return a:str
+    else
+        let left  = idx ==# 0 ? '' : a:str[: idx - 1]
+        let right = a:str[idx + strlen(a:from) :]
+        return left . a:to . right
+    endif
+endfunction
 
 " Restore 'cpoptions' {{{
 let &cpo = s:save_cpo
