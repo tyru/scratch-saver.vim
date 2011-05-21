@@ -40,7 +40,13 @@ function! scratch_saver#prompt_if_force_quit()
 endfunction
 
 function! s:is_empty_lock_file_by_pid(pid)
-    try   | let lines = readfile(s:get_lock_file_by_pid(pid))
+    let ERROR = -1
+    let lock_file = s:get_lock_file_by_pid(a:pid, ERROR)
+    if lock_file ==# ERROR
+        throw 'scratch_saver: internal error: '
+        \   . 's:get_lock_file_by_pid(pid, ERROR) returned ERROR.'
+    endif
+    try   | let lines = readfile(lock_file)
     catch | let lines = [] | endtry
     return empty(lines)
 endfunction
