@@ -23,12 +23,34 @@ endfunction
 
 function! scratch_saver#prompt_if_force_quit()
     let pids = s:get_crashed_pids()
-    " Filter non-empty lock files.
-    call filter(pids, '! s:is_empty_lock_file_by_pid(v:val)')
+    " Delete empty lock files.
+    " (certainly it's crash but it's not harmful
+    " because there were no unsaved buffer)
+    let empty_pids = copy(pids)    " Copy to not skip element when :unlet pids[i] occured.
+    let ERROR = -1
+    for i in range(len(empty_pids))
+        let pid = empty_pids[i]
+        let empty_lock_file = s:get_lock_file_by_pid(pid, ERROR)
+        if empty_lock_file !=# ERROR
+        \   && s:is_empty_file(empty_lock_file)
+            try
+                call delete(empty_lock_file)
+            catch
+                call s:echomsg('WarningMsg',
+                \   "Can't delete an empty lock file '"
+                \   . empty_lock_file . "'.")
+            endtry
+        else
+            " Remove from original list to
+            " not skip an element incorrectly.
+            unlet pids[i]
+        endif
+    endfor
     if empty(pids)
         return
     endif
 
+    " Found unsaved buffer(s)!
     try
         call s:open_buffer()
         call s:write_list_to_buffer(pids)
@@ -41,14 +63,8 @@ function! scratch_saver#prompt_if_force_quit()
     endtry
 endfunction
 
-function! s:is_empty_lock_file_by_pid(pid)
-    let ERROR = -1
-    let lock_file = s:get_lock_file_by_pid(a:pid, ERROR)
-    if lock_file ==# ERROR
-        throw 'scratch_saver: internal error: '
-        \   . 's:get_lock_file_by_pid(pid, ERROR) returned ERROR.'
-    endif
-    try   | let lines = readfile(lock_file)
+function! s:is_empty_file(file)
+    try   | let lines = readfile(a:file)
     catch | let lines = [] | endtry
     return empty(lines)
 endfunction
