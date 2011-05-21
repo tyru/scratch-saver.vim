@@ -174,6 +174,10 @@ function! scratch_saver#quit_gracefully()
 endfunction
 
 function! scratch_saver#save_modified_buffers()
+    if has('vim_starting')
+        return
+    endif
+
     let lines = []
     bufdo call s:save_if_modified(lines)
     if empty(lines)    " No modified buffer(s).
