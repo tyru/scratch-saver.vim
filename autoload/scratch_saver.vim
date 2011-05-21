@@ -100,18 +100,33 @@ function! s:open_buffer()
 endfunction
 
 function! s:write_list_to_buffer(pids)
-    let messages = [
+    call s:append_lines([
     \   "scratch_saver.vim detected crash!",
     \   "(PID: ".join(a:pids, ',').")",
     \   "want to restore unsaved buffer?",
     \   "",
-    \]
+    \   "Unsaved buffer:",
+    \])
     for pid in a:pids
         let lock_file = s:get_lock_file_by_pid(pid)
-        call setline(1,
-        \   messages
-        \   + ["Unsaved buffer:"]
-        \   + readfile(lock_file))
+        let unsaved =
+        \   s:return_exception('readfile', [lock_file], [])
+        if empty(unsaved)
+            continue
+        endif
+        let ERROR = []
+        for line in unsaved
+            let unpacked = s:unpack_lock_file_line(line, ERROR)
+            if unpacked is ERROR
+                continue
+            endif
+            let [saved_path, original_path] = unpacked
+            " Append unsaved buffer(s) to lines.
+            call s:append_lines(
+            \   printf('%s (original) - %s',
+            \       original_path, saved_path)
+            \)
+        endfor
     endfor
 endfunction
 
@@ -159,8 +174,24 @@ function! scratch_saver#quit_gracefully()
 endfunction
 
 function! scratch_saver#save_modified_buffers()
+    let lines = []
+    bufdo call s:save_if_modified(lines)
+    if empty(lines)    " No modified buffer(s).
+        return
+    endif
+
+    " Overwrite lock file.
     let lock_file = s:get_lock_file()
-    call writefile(s:get_modified_buffers(), lock_file)
+    call writefile(lines, lock_file)
+endfunction
+
+function! s:save_if_modified(ref)
+    if !&modified
+        return
+    endif
+    let saved_path = tempname()
+    execute 'write!' saved_path
+    call add(ref, s:pack_lock_file_line(saved_path, expand('%:p'))
 endfunction
 
 function! s:get_modified_buffers()
@@ -236,6 +267,22 @@ endfunction
 function! s:return_exception(func, args, error)
     try   | return call(a:func, a:args)
     catch | return a:error | endtry
+endfunction
+
+function! s:append_lines(lines)
+    if type(a:lines) !=# type([])
+        return s:append_lines([a:lines])
+    endif
+    call setline(line('$') + 1, a:lines)
+endfunction
+
+function! s:unpack_lock_file_line(line, error)
+    let unpacked = split(a:line, ':')
+    return len(unpacked) ==# 2 ? unpacked : a:error
+endfunction
+
+function! s:pack_lock_file_line(saved_path, original_path)
+    return a:saved_path . ":" . a:original_path
 endfunction
 
 
